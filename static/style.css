@@ -1959,23 +1959,23 @@
 }
 
 #handwriting_prediction_images_figure .figure_image:nth-child(1) {
-    background-image: url("static/images/handwriting/prediction/image_0.png");
+    background-image: url("images/handwriting/prediction/image_0.png");
 }
 
 #handwriting_prediction_images_figure .figure_image:nth-child(2) {
-    background-image: url("static/images/handwriting/prediction/image_1.png");
+    background-image: url("images/handwriting/prediction/image_1.png");
 }
 
 #handwriting_prediction_images_figure .figure_image:nth-child(3) {
-    background-image: url("static/images/handwriting/prediction/image_2.png");
+    background-image: url("images/handwriting/prediction/image_2.png");
 }
 
 #handwriting_prediction_images_figure .figure_image:nth-child(4) {
-    background-image: url("static/images/handwriting/prediction/image_3.png");
+    background-image: url("images/handwriting/prediction/image_3.png");
 }
 
 #handwriting_prediction_images_figure .figure_image:nth-child(5) {
-    background-image: url("static/images/handwriting/prediction/image_4.png");
+    background-image: url("images/handwriting/prediction/image_4.png");
 }
 
 #handwriting_synthesis_images_figure .figure_images {
@@ -2005,41 +2005,41 @@
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(1) .strokes {
-    background-image: url("static/images/handwriting/synthesis/0_strokes.png");
+    background-image: url("images/handwriting/synthesis/0_strokes.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(2) .strokes {
-    background-image: url("static/images/handwriting/synthesis/1_strokes.png");
+    background-image: url("images/handwriting/synthesis/1_strokes.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(3) .strokes {
-    background-image: url("static/images/handwriting/synthesis/2_strokes.png");
+    background-image: url("images/handwriting/synthesis/2_strokes.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(4) .strokes {
-    background-image: url("static/images/handwriting/synthesis/3_strokes.png");
+    background-image: url("images/handwriting/synthesis/3_strokes.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(5) .strokes {
-    background-image: url("static/images/handwriting/synthesis/4_strokes.png");
+    background-image: url("images/handwriting/synthesis/4_strokes.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(1) .graph {
-    background-image: url("static/images/handwriting/synthesis/0_graph.png");
+    background-image: url("images/handwriting/synthesis/0_graph.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(2) .graph {
-    background-image: url("static/images/handwriting/synthesis/1_graph.png");
+    background-image: url("images/handwriting/synthesis/1_graph.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(3) .graph {
-    background-image: url("static/images/handwriting/synthesis/2_graph.png");
+    background-image: url("images/handwriting/synthesis/2_graph.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(4) .graph {
-    background-image: url("static/images/handwriting/synthesis/3_graph.png");
+    background-image: url("images/handwriting/synthesis/3_graph.png");
 }
 
 #handwriting_synthesis_images_figure .figure_image:nth-child(5) .graph {
-    background-image: url("static/images/handwriting/synthesis/4_graph.png");
+    background-image: url("images/handwriting/synthesis/4_graph.png");
 }
