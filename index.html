@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+  <script src="https://distill.pub/template.v2.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.5.1/dist/tf.min.js"></script>
+
+  <link rel="stylesheet" href="static/style.css">
+</head>
+
+<body>
+  <d-front-matter>
+    <script type="text/json">
+      {
+        "title": "Visualizing and Understanding Quasi-Recurrent Neural Networks",
+        "description": "Understanding memorization and generalization in Quasi-Recurrent Neural Networks through experiments in character-level language modelling, text classification, handwriting synthesis and machine translation.",
+        "authors": [{
+          "author": "Suyash",
+          "authorURL": "https://suy.io/",
+          "affiliation": "Adobe Systems, India",
+          "affiliationURL": "https://www.adobe.com/in"
+        }]
+      }
+    </script>
+  </d-front-matter>
+
+  <d-title>
+    <h1>Visualizing and Understanding Quasi-Recurrent Neural Networks</h1>
+    <p>Understanding memorization, generalization and performance characteristics
+      of Quasi-Recurrent Neural Networks through experiments in character-level
+      language modelling, text classification and handwriting prediction and synthesis.</p>
+  </d-title>
+
+  <d-article>
+    <p>
+      We are living in an era of massively parallel sequence processing architectures.
+      Transfer Learning for Natural Language Processing has taken off as a field with
+      the advent of large transformer based neural network architectures.
+      The fundamental idea in the transformer architecture is that instead of
+      processing the input one timestep at a time, it can process the entire input sequence
+      in parallel, providing massive speedup in training vs traditional recurrent network
+      architectures. The speedups on LSTMs are more significant on specialized hardware
+      such as GPUs and TPUs. The transformer is one of the reference architectures used to
+      show performance gains for TPUs.
+    </p>
+    <p>
+      However, the transformer as an architecture has some disadvantages.
+      The first is a lack of sequential bias. The transformer is essentially a set of
+      Attention + Feed Forward layers, connected with residual connections between them.
+      The current way to introduce a sequential bias during training to prevent the network
+      from turning into a bag-of-words model is to add a positional encoding to each input.
+      However, this isn't strong enough for the model to generalize on small datasets and
+      architectures, leading to models requiring massive amounts of compute and training data
+      to obtain state-of-the-art results. The second is not having the ability of
+      autoregressive prediction. When predicting the next token in a sequence, a
+      recurrent network only requires the current input and state vector,
+      while a transformer requires the entire input sequence predicted so far, which
+      means that the cost of predicting the next token increases with the length of
+      the sequence. This can be a problem in some applications.
+    </p>
+    <p>
+      Optimizing and making large transformer models compact is an active area of research,
+      with techniques for quantization, distillation and compression of model weights.
+    </p>
+    <p>
+      Quasi-Recurrent Neural Networks<d-cite key="bradbury2016quasi"></d-cite>, introduced in 2016,
+      represent an interesting middle ground. The architecture does parallelize the processing of
+      input sequence, but preserves the sequential bias. The architecture is directly derived
+      from research into Long-Short Term Memory networks, with the fundamental idea being to
+      parallelize the computation of the input, forget and output gate calculations,
+      and then calculating the hidden state and output sequentially. As a result,
+      they seem to generalize well to smaller datasets, without requiring a positional encoding,
+      while giving a significant boost in training performance, vs both
+      regular and specialized implementations of LSTMs. A small modification also allows
+      autoregressive prediction where the cost of prediction does not grow with the length
+      of the sequence. Finally, since the architecture is based on convolutional networks,
+      it can leverage existing work to make CNN based image processing applications run faster
+      on small-runtime devices.
+    </p>
+
+    <h2>Architecture</h2>
+
+    <p>
+      For the sake of brevity, I will skip a detailed discussion of recurrent neural networks
+      and their specializations. There are better resources on the internet<d-cite
+        key="karpathy2015visualizing,karpathy2015effectiveness,olah2015understanding"></d-cite>.
+      The recurrence relation in a vanilla RNN to compute the output
+      <d-math>h^l_t</d-math> of layer <d-math>l
+      </d-math> at time <d-math>t</d-math> can be described as
+      <d-math block="block">
+        h^l_t = tanh(W^l\begin{pmatrix}
+        h_t^{l-1} \\
+        h_{t-1}^l
+        \end{pmatrix})
+      </d-math>
+    </p>
+    <p>
+      Long Short Term Memory has multiple variants,
+      but the most commonly used one can be formulated as
+      <d-math block="block">
+        \begin{pmatrix}
+        i \\
+        f \\
+        o \\
+        g
+        \end{pmatrix} = \begin{pmatrix}
+        sigm \\
+        sigm \\
+        sigm \\
+        tanh
+        \end{pmatrix} W^l \begin{pmatrix}
+        h_t^{l-1} \\
+        h_{t-1}^l
+        \end{pmatrix}
+      </d-math>
+      <d-math block="block">
+        c^l_t = f \odot c^l_{t - 1} + i \odot g
+      </d-math>
+      <d-math block="block">
+        h^l_t = o \odot tanh(c^l_t)
+      </d-math>
+    </p>
+    <p>
+      The principal idea in Quasi-Recurrent Neural Networks (hereafter referred to as QRNNs)
+      is to use temporal convolutions for computing different representations and then
+      pooling them to obtain the output and the hidden states. A temporal convolution
+      essentially indicates that the convolution preserves the input length by
+      padding only to the left. The first step is to compute an input representation
+    </p>
+    <d-math block="block">
+      z^l = tanh(W_z^l * h^{l - 1})
+    </d-math>
+    <p>
+      The context that the output uses depends on the size of the convolution kernel.
+      If the kernel size is <d-math>k</d-math>, the
+      convolution operation can also be written as
+    </p>
+    <d-math block="block">
+      z^l_t = tanh(W_{z_1}^l h^{l - 1}_{t - (k - 1)} + W_{z_2}^l h^{l - 1}_{t - (k - 2)} + \ldots + W_{z_k}^l h^{l -
+      1}_t)
+    </d-math>
+
+    <h3>f Pooling</h3>
+    <p>
+      In the simplest form, we only use a forget gate.
+      The output of the forget gate is calculated as
+    </p>
+    <d-math block="block">
+      f^l = \sigma(W_f^l * h^{l - 1})
+    </d-math>
+    <p>
+      Following which, the hidden state <d-math>h_l^t</d-math> can be calculated
+      by pooling over the forget gate outputs over time
+    </p>
+    <d-math block="block">
+      h^l_t = f^l_t \odot h^l_{t - 1} + (1 - f^l_t) \odot z^l_t
+    </d-math>
+
+    <h3>fo Pooling</h3>
+    <p>
+      We can also include an output gate, which is calculated similar to the forget gate.
+      The equation for the output gate is
+    </p>
+    <d-math block="block">
+      o^l = \sigma(W_o^l * h^{l - 1})
+    </d-math>
+    <p>
+      The state vectors are then calculated as
+    </p>
+    <d-math block="block">
+      c^l_t = f^l_t \odot c^l_{t - 1} + (1 - f^l_t) \odot z^l_t
+    </d-math>
+    <p>and</p>
+    <d-math block="block">
+      h^l_t = o^l_t \odot c^l_t
+    </d-math>
+    <h3>ifo Pooling</h3>
+    <p>
+      We can also add an input gate
+    </p>
+    <d-math block="block">
+      i^l = \sigma(W_i^l * h^{l - 1})
+    </d-math>
+    <p>
+      The state vectors are then calculated as
+    </p>
+    <d-math block="block">
+      c^l_t = f^l_t \odot c^l_{t - 1} + i^l_t \odot z^l_t
+    </d-math>
+    <d-math block="block">
+      h^l_t = o^l_t \odot c^l_t
+    </d-math>
+
+    <h3>Layer Normalization</h3>
+    <p>Unlike the original paper, instead of directly activating the convolution outputs,
+      a layer normalization layer is inserted in the middle. This is primarily motivated
+      from previous work in image processing applications. For images,
+      initially layer normalization, then batch normalization, then instance normalization
+      and more recently group normalization has been shown to give state-of-the-art results in
+      specific scenarios. Figuring out novel parameter renormalization techniques continues to
+      be an active area of research. In this work, layer normalization is used
+      for all the convolution outputs.
+    </p>
+
+    <h3>Autoregressive Prediction</h3>
+    <p>
+      One of the more exciting characteristics of this approach is its support
+      for autoregressive prediction. This is motivated by the fact that at each timestep
+      <d-math>t</d-math>, in order to compute output, we only need <d-math>k</d-math> inputs,
+      from <d-math>t - (k - 1)</d-math> to <d-math>t</d-math>.
+    </p>
+    <p>We also note that in order to compute the outputs for timesteps
+      <d-math>1</d-math> to <d-math>k - 1</d-math>, we need to pad the input with zeros.</p>
+    <p>Hence, instead of using a fixed padding, we convert it into a state parameter,
+      along with the hidden and if needed, cell state. The following visualization helps
+      illustrate the idea.
+    </p>
+
+    <figure id="autoregressive-figure" style="position: relative;">
+      <svg id="autoregressive-diagram"></svg>
+    </figure>
+
+    <p>Hence, QRNNs with f-Pooling, have 3 state parameters
+      <d-math>p_z</d-math>, <d-math>p_f</d-math> and <d-math>h</d-math>.
+      QRNNs with fo-Pooling have 5 state parameters <d-math>p_z</d-math>, <d-math>p_f</d-math>,
+      <d-math>p_o</d-math>, <d-math>c</d-math> and <d-math>h</d-math>. QRNNs with ifo-Pooling
+      have 6 state parameters <d-math>p_z</d-math>, <d-math>p_f</d-math>, <d-math>p_o</d-math>,
+      <d-math>p_i</d-math>, <d-math>c</d-math> and <d-math>h</d-math>. All the padding state
+      parameters are of size <d-math>[kernel\_size - 1, d^{l - 1}]</d-math>. All the
+      cell state parameters are of size <d-math>[d^l]</d-math>.
+    </p>
+
+    <p>
+      The following figure allows visualizing different pooling modes.
+      The kernel size is 3.
+    </p>
+
+    <figure id="f-figure" class="architecture-figure hidden" style="position: relative">
+      <svg id="f-diagram"></svg>
+      <p style="position: absolute; top: 50px; left: 80px;"><b>Convolution</b></p>
+      <p style="position: absolute; top: 200px; left: 80px;"><b>Layer Normalization</b></p>
+      <p style="position: absolute; top: 330px; left: 80px;"><b>Activation</b></p>
+      <div style="position: absolute; top: 10px; left: 190px;">
+        <d-math>h^{l - 1}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 185px;">
+        <d-math>z^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 365px;">
+        <d-math>f^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 530px; left: 270px;">
+        <d-math>h^{l}</d-math>
+      </div>
+    </figure>
+
+    <figure id="fo-figure" class="architecture-figure" style="position: relative">
+      <svg id="fo-diagram"></svg>
+      <p style="position: absolute; top: 50px; left: 0px;"><b>Convolution</b></p>
+      <p style="position: absolute; top: 200px; left: 0px;"><b>Layer Normalization</b></p>
+      <p style="position: absolute; top: 330px; left: 0px;"><b>Activation</b></p>
+      <div style="position: absolute; top: 10px; left: 190px;">
+        <d-math>h^{l - 1}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 95px;">
+        <d-math>z^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 275px;">
+        <d-math>f^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 455px;">
+        <d-math>o^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 530px; left: 270px;">
+        <d-math>c^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 660px; left: 270px;">
+        <d-math>h^{l}</d-math>
+      </div>
+    </figure>
+
+    <figure id="ifo-figure" class="architecture-figure hidden" style="position: relative">
+      <svg id="ifo-diagram"></svg>
+      <p style="position: absolute; top: 50px; left: -100px;"><b>Convolution</b></p>
+      <p style="position: absolute; top: 200px; left: -100px;"><b>Layer Normalization</b></p>
+      <p style="position: absolute; top: 330px; left: -100px;"><b>Activation</b></p>
+      <div style="position: absolute; top: 10px; left: 190px;">
+        <d-math>h^{l - 1}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 5px;">
+        <d-math>z^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 185px;">
+        <d-math>f^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 365px;">
+        <d-math>i^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 400px; left: 545px;">
+        <d-math>o^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 530px; left: 270px;">
+        <d-math>c^{l}</d-math>
+      </div>
+      <div style="position: absolute; top: 660px; left: 270px;">
+        <d-math>h^{l}</d-math>
+      </div>
+    </figure>
+
+    <div>
+      <div class="architecture-links">
+        <a id="architecture-f-link" class="architecture-link" data-figure="f-figure" href="javascript:void(0)">
+          <d-math>f</d-math>
+        </a>
+        <a id="architecture-fo-link" class="architecture-link selected" data-figure="fo-figure"
+          href="javascript:void(0)">
+          <d-math>fo</d-math>
+        </a>
+        <a id="architecture-ifo-link" class="architecture-link" data-figure="ifo-figure" href="javascript:void(0)">
+          <d-math>ifo</d-math>
+        </a>
+      </div>
+      <footer>
+        Click the links above to view different variants of the architecture.
+      </footer>
+    </div>
+
+    <h2>Character-Level Language Modelling</h2>
+
+    <p>Character Level language modelling is the most basic and frequently used mechanism
+      to visualize the inner workings of recurrent networks and units. Here, for this work,
+      I prepared non-standard datasets. There are 4 datasets, one containing plays by
+      William Shakespeare, one containing C++ and Python code from the TensorFlow
+      source repository on GitHub, one containing prose by Mark Twain, and finally one
+      containing poems by Jonathan Swift. More details about the datasets are in the appendix.</p>
+
+    <h3>Conditional Normalization and modelling multiple datasets in the same network</h3>
+
+    <p>One of the interesting ideas in style transfer research is the ability to model
+      multiple styles within the same generator network<d-cite key="dumoulin2016learned"></d-cite>.
+      The primary observation is that we can teach a network to model multiple styles,
+      by simply training a new set of normalization parameters for each style.
+      It is hypothesized that this works because the network learns the style agnostic ideas
+      of image generation in the convolution layers, while learning style specific details in
+      the normalization layers.</p>
+
+    <p>The idea is extremely simple. For each normalization layer, instead of maintaining a
+      single set of <d-math>\gamma</d-math> and <d-math>\beta</d-math> parameters,
+      we maintain <d-math>N</d-math> of them, where <d-math>N</d-math> is the total number of
+      conditions we want to learn. One of the inputs to the model
+      a weights vector <d-math>(w)</d-math> signifying weights of different conditions
+      for the input, and we multiply the normalization parameters
+      by their weights and then aggregate them to compute the normalization
+      <d-math>\gamma</d-math> and <d-math>\beta</d-math> for the input.</p>
+
+    <d-math block="block">
+      \gamma = \sum_{i}^{N} w_i \gamma_i
+    </d-math>
+
+    <d-math block="block">
+      \beta = \sum_{i}^{N} w_i \beta_i
+    </d-math>
+
+    <p>The following visualization helps illustrate the idea</p>
+
+    <figure style="position: relative;">
+      <svg id="conditional-norm-diagram"></svg>
+      <div id="conditional-norm-mul-g">
+        <div>×</div>
+        <div>×</div>
+        <div>×</div>
+        <div>×</div>
+      </div>
+      <div id="conditional-norm-mul-b">
+        <div>×</div>
+        <div>×</div>
+        <div>×</div>
+        <div>×</div>
+      </div>
+      <div id="conditional-norm-lab-g">
+        <div>
+          <d-math>\gamma_1</d-math>
+        </div>
+        <div>
+          <d-math>\gamma_2</d-math>
+        </div>
+        <div>
+          <d-math>\gamma_3</d-math>
+        </div>
+        <div>
+          <d-math>\gamma_4</d-math>
+        </div>
+      </div>
+      <div id="conditional-norm-lab-b">
+        <div>
+          <d-math>\beta_1</d-math>
+        </div>
+        <div>
+          <d-math>\beta_2</d-math>
+        </div>
+        <div>
+          <d-math>\beta_3</d-math>
+        </div>
+        <div>
+          <d-math>\beta_4</d-math>
+        </div>
+      </div>
+      <div id="conditional-norm-w">
+        <div>
+          <d-math>w_1</d-math>
+        </div>
+        <div>
+          <d-math>w_2</d-math>
+        </div>
+        <div>
+          <d-math>w_3</d-math>
+        </div>
+        <div>
+          <d-math>w_4</d-math>
+        </div>
+      </div>
+      <div id="conditional-norm-final-g">
+        <div>
+          <d-math>\gamma</d-math>
+        </div>
+      </div>
+      <div id="conditional-norm-final-b">
+        <div>
+          <d-math>\beta</d-math>
+        </div>
+      </div>
+    </figure>
+
+    <p>During training, the weight of the current input's style is set to 1,
+      while all other weights are 0. For inference as
+      well, it is better for all the weights to add up to 1.</p>
+
+    <p>I trained 12 models, all 3 configurations corresponding to kernel sizes of 1, 2, 3 and 4.
+      Each model was trained with 4 conditions, corresponding to the Shakespeare, TensorFlow,
+      Mark Twain and Jonathan Swift datasets. The training logs are available for visualization
+      on <a href="https://tensorboard.dev/experiment/34ntkGiVR9iorjLRMlEWlg/" target="_blank"
+        rel="noopener noreferrer">TensorBoard.dev</a>.</p>
+
+    <h3>Connectivity Visualization</h3>
+
+    <p>In this section, I'll visualize connectivity for outputs at different timesteps
+      in an attempt to not just visualize memorization capabilities for the networks,
+      but also how they change across different pooling modes and
+      kernel sizes. The connectivity definition is taken from the distill memorization
+      paper<d-cite key="madsen2019visualizing"></d-cite>.
+    </p>
+
+    <p>We do connectivity visualization for 4 different inputs taken directly
+      from the datasets. For each input, when computing connectivity, the condition weight
+      corresponding to their dataset is set to 1, and others are set to 0.
+      The basic idea is that given an input of length <d-math>l</d-math>,
+      we take the final output of the network and compute its gradients
+      w.r.t the input at each timestep. We infer the magnitude
+      of the gradient of final output w.r.t the input at time <d-math>t</d-math> as the
+      "memory" of the input at time <d-math>t</d-math>, when computing the output.</p>
+
+    <d-math block="block">
+      connectivity(h^{l_i}_{t_i}, h^{l_o}_{t_o}) = \left\Vert \frac{\partial h^{l_o}_{t_o}}{\partial h^{l_i}_{t_i}}
+      \right\Vert
+    </d-math>
+
+    <figure>
+      <div class="connectivity_demo" id="shakespeare_demo">
+        <div class="connectivity_demo_controls">
+          <div class="connectivity_demo_pooling_controls">
+            <div class="connectivity_demo_control_title">Pooling</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="f" class="connectivity_demo_pooling_control" href="javascript:void(0)">f</a>
+              <a data-value="fo" class="connectivity_demo_pooling_control" href="javascript:void(0)">fo</a>
+              <a data-value="ifo" class="connectivity_demo_pooling_control selected" href="javascript:void(0)">ifo</a>
+            </div>
+          </div>
+          <div class="connectivity_demo_kernel_size_controls">
+            <div class="connectivity_demo_control_title">Kernel Size</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="1" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">1</a>
+              <a data-value="2" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">2</a>
+              <a data-value="3" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">3</a>
+              <a data-value="4" class="connectivity_demo_kernel_size_control selected" href="javascript:void(0)">4</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="connectivity_demo_content">
+          <div class="connectivity_demo_text"><span data-index="0">A</span><span data-index="1">N</span><span data-index="2">T</span><span data-index="3">O</span><span data-index="4">N</span><span data-index="5">Y</span><span data-index="6">.</span><span data-index="7">&nbsp;</span><span data-index="8">F</span><span data-index="9">r</span><span data-index="10">i</span><span data-index="11">e</span><span data-index="12">n</span><span data-index="13">d</span><span data-index="14">s</span><span data-index="15">,</span><span data-index="16">&nbsp;</span><span data-index="17">R</span><span data-index="18">o</span><span data-index="19">m</span><span data-index="20">a</span><span data-index="21">n</span><span data-index="22">s</span><span data-index="23">,</span><span data-index="24">&nbsp;</span><span data-index="25">c</span><span data-index="26">o</span><span data-index="27">u</span><span data-index="28">n</span><span data-index="29">t</span><span data-index="30">r</span><span data-index="31">y</span><span data-index="32">m</span><span data-index="33">e</span><span data-index="34">n</span><span data-index="35">,</span><span data-index="36">&nbsp;</span><span data-index="37">l</span><span data-index="38">e</span><span data-index="39">n</span><span data-index="40">d</span><span data-index="41">&nbsp;</span><span data-index="42">m</span><span data-index="43">e</span><span data-index="44">&nbsp;</span><span data-index="45">y</span><span data-index="46">o</span><span data-index="47">u</span><span data-index="48">r</span><span data-index="49">&nbsp;</span><span data-index="50">e</span><span data-index="51">a</span><span data-index="52">r</span><span data-index="53">s</span><span data-index="54">!</span><span data-index="55"><br></span><span data-index="56">&nbsp;</span><span data-index="57">&nbsp;</span><span data-index="58">&nbsp;</span><span data-index="59">&nbsp;</span><span data-index="60">I</span><span data-index="61">&nbsp;</span><span data-index="62">c</span><span data-index="63">o</span><span data-index="64">m</span><span data-index="65">e</span><span data-index="66">&nbsp;</span><span data-index="67">t</span><span data-index="68">o</span><span data-index="69">&nbsp;</span><span data-index="70">b</span><span data-index="71">u</span><span data-index="72">r</span><span data-index="73">y</span><span data-index="74">&nbsp;</span><span data-index="75">C</span><span data-index="76">a</span><span data-index="77">e</span><span data-index="78">s</span><span data-index="79">a</span><span data-index="80">r</span><span data-index="81">,</span><span data-index="82">&nbsp;</span><span data-index="83">n</span><span data-index="84">o</span><span data-index="85">t</span><span data-index="86">&nbsp;</span><span data-index="87">t</span><span data-index="88">o</span><span data-index="89">&nbsp;</span><span data-index="90">p</span><span data-index="91">r</span><span data-index="92">a</span><span data-index="93">i</span><span data-index="94">s</span><span data-index="95">e</span><span data-index="96">&nbsp;</span><span data-index="97">h</span><span data-index="98">i</span><span data-index="99">m</span><span data-index="100">.</span><span data-index="101"><br></span><span data-index="102">&nbsp;</span><span data-index="103">&nbsp;</span><span data-index="104">&nbsp;</span><span data-index="105">&nbsp;</span><span data-index="106">T</span><span data-index="107">h</span><span data-index="108">e</span><span data-index="109">&nbsp;</span><span data-index="110">e</span><span data-index="111">v</span><span data-index="112">i</span><span data-index="113">l</span><span data-index="114">&nbsp;</span><span data-index="115">t</span><span data-index="116">h</span><span data-index="117">a</span><span data-index="118">t</span><span data-index="119">&nbsp;</span><span data-index="120">m</span><span data-index="121">e</span><span data-index="122">n</span><span data-index="123">&nbsp;</span><span data-index="124">d</span><span data-index="125">o</span><span data-index="126">&nbsp;</span><span data-index="127">l</span><span data-index="128">i</span><span data-index="129">v</span><span data-index="130">e</span><span data-index="131">s</span><span data-index="132">&nbsp;</span><span data-index="133">a</span><span data-index="134">f</span><span data-index="135">t</span><span data-index="136">e</span><span data-index="137">r</span><span data-index="138">&nbsp;</span><span data-index="139">t</span><span data-index="140">h</span><span data-index="141">e</span><span data-index="142">m</span><span data-index="143">,</span><span data-index="144"><br></span><span data-index="145">&nbsp;</span><span data-index="146">&nbsp;</span><span data-index="147">&nbsp;</span><span data-index="148">&nbsp;</span><span data-index="149">T</span><span data-index="150">h</span><span data-index="151">e</span><span data-index="152">&nbsp;</span><span data-index="153">g</span><span data-index="154">o</span><span data-index="155">o</span><span data-index="156">d</span><span data-index="157">&nbsp;</span><span data-index="158">i</span><span data-index="159">s</span><span data-index="160">&nbsp;</span><span data-index="161">o</span><span data-index="162">f</span><span data-index="163">t</span><span data-index="164">&nbsp;</span><span data-index="165">i</span><span data-index="166">n</span><span data-index="167">t</span><span data-index="168">e</span><span data-index="169">r</span><span data-index="170">r</span><span data-index="171">e</span><span data-index="172">d</span><span data-index="173">&nbsp;</span><span data-index="174">w</span><span data-index="175">i</span><span data-index="176">t</span><span data-index="177">h</span><span data-index="178">&nbsp;</span><span data-index="179">t</span><span data-index="180">h</span><span data-index="181">e</span><span data-index="182">i</span><span data-index="183">r</span><span data-index="184">&nbsp;</span><span data-index="185">b</span><span data-index="186">o</span><span data-index="187">n</span><span data-index="188">e</span><span data-index="189">s</span><span data-index="190">;</span></div>
+          <div class="connectivity_demo_loading hidden"></div>
+          <p>This is an interactive visualization, select the appropriate architecture
+            and hover over individual characters.</p>
+        </div>
+      </div>
+    </figure>
+
+    <figure>
+      <div class="connectivity_demo" id="tensorflow_demo">
+        <div class="connectivity_demo_controls">
+          <div class="connectivity_demo_pooling_controls">
+            <div class="connectivity_demo_control_title">Pooling</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="f" class="connectivity_demo_pooling_control" href="javascript:void(0)">f</a>
+              <a data-value="fo" class="connectivity_demo_pooling_control" href="javascript:void(0)">fo</a>
+              <a data-value="ifo" class="connectivity_demo_pooling_control selected" href="javascript:void(0)">ifo</a>
+            </div>
+          </div>
+          <div class="connectivity_demo_kernel_size_controls">
+            <div class="connectivity_demo_control_title">Kernel Size</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="1" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">1</a>
+              <a data-value="2" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">2</a>
+              <a data-value="3" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">3</a>
+              <a data-value="4" class="connectivity_demo_kernel_size_control selected" href="javascript:void(0)">4</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="connectivity_demo_content">
+          <div class="connectivity_demo_text"><span data-index="0">@</span><span data-index="1">k</span><span data-index="2">e</span><span data-index="3">r</span><span data-index="4">a</span><span data-index="5">s</span><span data-index="6">_</span><span data-index="7">e</span><span data-index="8">x</span><span data-index="9">p</span><span data-index="10">o</span><span data-index="11">r</span><span data-index="12">t</span><span data-index="13">(</span><span data-index="14">'</span><span data-index="15">k</span><span data-index="16">e</span><span data-index="17">r</span><span data-index="18">a</span><span data-index="19">s</span><span data-index="20">.</span><span data-index="21">b</span><span data-index="22">a</span><span data-index="23">c</span><span data-index="24">k</span><span data-index="25">e</span><span data-index="26">n</span><span data-index="27">d</span><span data-index="28">.</span><span data-index="29">s</span><span data-index="30">o</span><span data-index="31">f</span><span data-index="32">t</span><span data-index="33">p</span><span data-index="34">l</span><span data-index="35">u</span><span data-index="36">s</span><span data-index="37">'</span><span data-index="38">)</span><span data-index="39"><br></span><span data-index="40">d</span><span data-index="41">e</span><span data-index="42">f</span><span data-index="43">&nbsp;</span><span data-index="44">s</span><span data-index="45">o</span><span data-index="46">f</span><span data-index="47">t</span><span data-index="48">p</span><span data-index="49">l</span><span data-index="50">u</span><span data-index="51">s</span><span data-index="52">(</span><span data-index="53">x</span><span data-index="54">)</span><span data-index="55">:</span><span data-index="56"><br></span><span data-index="57">&nbsp;</span><span data-index="58">&nbsp;</span><span data-index="59">"</span><span data-index="60">"</span><span data-index="61">"</span><span data-index="62">S</span><span data-index="63">o</span><span data-index="64">f</span><span data-index="65">t</span><span data-index="66">p</span><span data-index="67">l</span><span data-index="68">u</span><span data-index="69">s</span><span data-index="70">&nbsp;</span><span data-index="71">o</span><span data-index="72">f</span><span data-index="73">&nbsp;</span><span data-index="74">a</span><span data-index="75">&nbsp;</span><span data-index="76">t</span><span data-index="77">e</span><span data-index="78">n</span><span data-index="79">s</span><span data-index="80">o</span><span data-index="81">r</span><span data-index="82">.</span><span data-index="83"><br></span><span data-index="84">&nbsp;</span><span data-index="85">&nbsp;</span><span data-index="86">A</span><span data-index="87">r</span><span data-index="88">g</span><span data-index="89">u</span><span data-index="90">m</span><span data-index="91">e</span><span data-index="92">n</span><span data-index="93">t</span><span data-index="94">s</span><span data-index="95">:</span><span data-index="96"><br></span><span data-index="97">&nbsp;</span><span data-index="98">&nbsp;</span><span data-index="99">&nbsp;</span><span data-index="100">&nbsp;</span><span data-index="101">&nbsp;</span><span data-index="102">&nbsp;</span><span data-index="103">x</span><span data-index="104">:</span><span data-index="105">&nbsp;</span><span data-index="106">A</span><span data-index="107">&nbsp;</span><span data-index="108">t</span><span data-index="109">e</span><span data-index="110">n</span><span data-index="111">s</span><span data-index="112">o</span><span data-index="113">r</span><span data-index="114">&nbsp;</span><span data-index="115">o</span><span data-index="116">r</span><span data-index="117">&nbsp;</span><span data-index="118">v</span><span data-index="119">a</span><span data-index="120">r</span><span data-index="121">i</span><span data-index="122">a</span><span data-index="123">b</span><span data-index="124">l</span><span data-index="125">e</span><span data-index="126">.</span><span data-index="127"><br></span><span data-index="128">&nbsp;</span><span data-index="129">&nbsp;</span><span data-index="130">R</span><span data-index="131">e</span><span data-index="132">t</span><span data-index="133">u</span><span data-index="134">r</span><span data-index="135">n</span><span data-index="136">s</span><span data-index="137">:</span><span data-index="138"><br></span><span data-index="139">&nbsp;</span><span data-index="140">&nbsp;</span><span data-index="141">&nbsp;</span><span data-index="142">&nbsp;</span><span data-index="143">&nbsp;</span><span data-index="144">&nbsp;</span><span data-index="145">A</span><span data-index="146">&nbsp;</span><span data-index="147">t</span><span data-index="148">e</span><span data-index="149">n</span><span data-index="150">s</span><span data-index="151">o</span><span data-index="152">r</span><span data-index="153">.</span><span data-index="154"><br></span><span data-index="155">&nbsp;</span><span data-index="156">&nbsp;</span><span data-index="157">"</span><span data-index="158">"</span><span data-index="159">"</span><span data-index="160"><br></span><span data-index="161">&nbsp;</span><span data-index="162">&nbsp;</span><span data-index="163">r</span><span data-index="164">e</span><span data-index="165">t</span><span data-index="166">u</span><span data-index="167">r</span><span data-index="168">n</span><span data-index="169">&nbsp;</span><span data-index="170">n</span><span data-index="171">n</span><span data-index="172">.</span><span data-index="173">s</span><span data-index="174">o</span><span data-index="175">f</span><span data-index="176">t</span><span data-index="177">p</span><span data-index="178">l</span><span data-index="179">u</span><span data-index="180">s</span><span data-index="181">(</span><span data-index="182">x</span><span data-index="183">)</span></div>
+          <div class="connectivity_demo_loading hidden"></div>
+          <p>This is an interactive visualization, select the appropriate architecture
+            and hover over individual characters.</p>
+        </div>
+      </div>
+    </figure>
+
+    <figure>
+      <div class="connectivity_demo" id="mark_twain_demo">
+        <div class="connectivity_demo_controls">
+          <div class="connectivity_demo_pooling_controls">
+            <div class="connectivity_demo_control_title">Pooling</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="f" class="connectivity_demo_pooling_control" href="javascript:void(0)">f</a>
+              <a data-value="fo" class="connectivity_demo_pooling_control" href="javascript:void(0)">fo</a>
+              <a data-value="ifo" class="connectivity_demo_pooling_control selected" href="javascript:void(0)">ifo</a>
+            </div>
+          </div>
+          <div class="connectivity_demo_kernel_size_controls">
+            <div class="connectivity_demo_control_title">Kernel Size</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="1" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">1</a>
+              <a data-value="2" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">2</a>
+              <a data-value="3" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">3</a>
+              <a data-value="4" class="connectivity_demo_kernel_size_control selected" href="javascript:void(0)">4</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="connectivity_demo_content">
+          <div class="connectivity_demo_text"><span data-index="0">T</span><span data-index="1">o</span><span data-index="2">m</span><span data-index="3">&nbsp;</span><span data-index="4">s</span><span data-index="5">a</span><span data-index="6">i</span><span data-index="7">d</span><span data-index="8">&nbsp;</span><span data-index="9">t</span><span data-index="10">o</span><span data-index="11">&nbsp;</span><span data-index="12">h</span><span data-index="13">i</span><span data-index="14">m</span><span data-index="15">s</span><span data-index="16">e</span><span data-index="17">l</span><span data-index="18">f</span><span data-index="19">&nbsp;</span><span data-index="20">t</span><span data-index="21">h</span><span data-index="22">a</span><span data-index="23">t</span><span data-index="24">&nbsp;</span><span data-index="25">i</span><span data-index="26">t</span><span data-index="27">&nbsp;</span><span data-index="28">w</span><span data-index="29">a</span><span data-index="30">s</span><span data-index="31">&nbsp;</span><span data-index="32">n</span><span data-index="33">o</span><span data-index="34">t</span><span data-index="35">&nbsp;</span><span data-index="36">s</span><span data-index="37">u</span><span data-index="38">c</span><span data-index="39">h</span><span data-index="40">&nbsp;</span><span data-index="41">a</span><span data-index="42">&nbsp;</span><span data-index="43">h</span><span data-index="44">o</span><span data-index="45">l</span><span data-index="46">l</span><span data-index="47">o</span><span data-index="48">w</span><span data-index="49">&nbsp;</span><span data-index="50">w</span><span data-index="51">o</span><span data-index="52">r</span><span data-index="53">l</span><span data-index="54">d</span><span data-index="55">,</span><span data-index="56">&nbsp;</span><span data-index="57">a</span><span data-index="58">f</span><span data-index="59">t</span><span data-index="60">e</span><span data-index="61">r</span><span data-index="62">&nbsp;</span><span data-index="63">a</span><span data-index="64">l</span><span data-index="65">l</span><span data-index="66">.</span><span data-index="67">&nbsp;</span><span data-index="68">H</span><span data-index="69">e</span><span data-index="70"><br></span><span data-index="71">h</span><span data-index="72">a</span><span data-index="73">d</span><span data-index="74">&nbsp;</span><span data-index="75">d</span><span data-index="76">i</span><span data-index="77">s</span><span data-index="78">c</span><span data-index="79">o</span><span data-index="80">v</span><span data-index="81">e</span><span data-index="82">r</span><span data-index="83">e</span><span data-index="84">d</span><span data-index="85">&nbsp;</span><span data-index="86">a</span><span data-index="87">&nbsp;</span><span data-index="88">g</span><span data-index="89">r</span><span data-index="90">e</span><span data-index="91">a</span><span data-index="92">t</span><span data-index="93">&nbsp;</span><span data-index="94">l</span><span data-index="95">a</span><span data-index="96">w</span><span data-index="97">&nbsp;</span><span data-index="98">o</span><span data-index="99">f</span><span data-index="100">&nbsp;</span><span data-index="101">h</span><span data-index="102">u</span><span data-index="103">m</span><span data-index="104">a</span><span data-index="105">n</span><span data-index="106">&nbsp;</span><span data-index="107">a</span><span data-index="108">c</span><span data-index="109">t</span><span data-index="110">i</span><span data-index="111">o</span><span data-index="112">n</span><span data-index="113">,</span><span data-index="114">&nbsp;</span><span data-index="115">w</span><span data-index="116">i</span><span data-index="117">t</span><span data-index="118">h</span><span data-index="119">o</span><span data-index="120">u</span><span data-index="121">t</span><span data-index="122">&nbsp;</span><span data-index="123">k</span><span data-index="124">n</span><span data-index="125">o</span><span data-index="126">w</span><span data-index="127">i</span><span data-index="128">n</span><span data-index="129">g</span><span data-index="130">&nbsp;</span><span data-index="131">i</span><span data-index="132">t</span><span data-index="133">-</span><span data-index="134">-</span><span data-index="135">n</span><span data-index="136">a</span><span data-index="137">m</span><span data-index="138">e</span><span data-index="139">l</span><span data-index="140">y</span><span data-index="141">,</span><span data-index="142"><br></span><span data-index="143">t</span><span data-index="144">h</span><span data-index="145">a</span><span data-index="146">t</span><span data-index="147">&nbsp;</span><span data-index="148">i</span><span data-index="149">n</span><span data-index="150">&nbsp;</span><span data-index="151">o</span><span data-index="152">r</span><span data-index="153">d</span><span data-index="154">e</span><span data-index="155">r</span><span data-index="156">&nbsp;</span><span data-index="157">t</span><span data-index="158">o</span><span data-index="159">&nbsp;</span><span data-index="160">m</span><span data-index="161">a</span><span data-index="162">k</span><span data-index="163">e</span><span data-index="164">&nbsp;</span><span data-index="165">a</span><span data-index="166">&nbsp;</span><span data-index="167">m</span><span data-index="168">a</span><span data-index="169">n</span><span data-index="170">&nbsp;</span><span data-index="171">o</span><span data-index="172">r</span><span data-index="173">&nbsp;</span><span data-index="174">a</span><span data-index="175">&nbsp;</span><span data-index="176">b</span><span data-index="177">o</span><span data-index="178">y</span><span data-index="179">&nbsp;</span><span data-index="180">c</span><span data-index="181">o</span><span data-index="182">v</span><span data-index="183">e</span><span data-index="184">t</span><span data-index="185">&nbsp;</span><span data-index="186">a</span><span data-index="187">&nbsp;</span><span data-index="188">t</span><span data-index="189">h</span><span data-index="190">i</span><span data-index="191">n</span><span data-index="192">g</span><span data-index="193">,</span><span data-index="194">&nbsp;</span><span data-index="195">i</span><span data-index="196">t</span><span data-index="197">&nbsp;</span><span data-index="198">i</span><span data-index="199">s</span><span data-index="200">&nbsp;</span><span data-index="201">o</span><span data-index="202">n</span><span data-index="203">l</span><span data-index="204">y</span><span data-index="205">&nbsp;</span><span data-index="206">n</span><span data-index="207">e</span><span data-index="208">c</span><span data-index="209">e</span><span data-index="210">s</span><span data-index="211">s</span><span data-index="212">a</span><span data-index="213">r</span><span data-index="214">y</span><span data-index="215"><br></span><span data-index="216">t</span><span data-index="217">o</span><span data-index="218">&nbsp;</span><span data-index="219">m</span><span data-index="220">a</span><span data-index="221">k</span><span data-index="222">e</span><span data-index="223">&nbsp;</span><span data-index="224">t</span><span data-index="225">h</span><span data-index="226">e</span><span data-index="227">&nbsp;</span><span data-index="228">t</span><span data-index="229">h</span><span data-index="230">i</span><span data-index="231">n</span><span data-index="232">g</span><span data-index="233">&nbsp;</span><span data-index="234">d</span><span data-index="235">i</span><span data-index="236">f</span><span data-index="237">f</span><span data-index="238">i</span><span data-index="239">c</span><span data-index="240">u</span><span data-index="241">l</span><span data-index="242">t</span><span data-index="243">&nbsp;</span><span data-index="244">t</span><span data-index="245">o</span><span data-index="246">&nbsp;</span><span data-index="247">a</span><span data-index="248">t</span><span data-index="249">t</span><span data-index="250">a</span><span data-index="251">i</span><span data-index="252">n</span><span data-index="253">.</span></div>
+          <div class="connectivity_demo_loading hidden"></div>
+          <p>This is an interactive visualization, select the appropriate architecture
+            and hover over individual characters.</p>
+        </div>
+      </div>
+    </figure>
+
+    <figure>
+      <div class="connectivity_demo" id="jonathan_swift_demo">
+        <div class="connectivity_demo_controls">
+          <div class="connectivity_demo_pooling_controls">
+            <div class="connectivity_demo_control_title">Pooling</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="f" class="connectivity_demo_pooling_control" href="javascript:void(0)">f</a>
+              <a data-value="fo" class="connectivity_demo_pooling_control" href="javascript:void(0)">fo</a>
+              <a data-value="ifo" class="connectivity_demo_pooling_control selected" href="javascript:void(0)">ifo</a>
+            </div>
+          </div>
+          <div class="connectivity_demo_kernel_size_controls">
+            <div class="connectivity_demo_control_title">Kernel Size</div>
+            <div class="connectivity_demo_control_links">
+              <a data-value="1" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">1</a>
+              <a data-value="2" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">2</a>
+              <a data-value="3" class="connectivity_demo_kernel_size_control" href="javascript:void(0)">3</a>
+              <a data-value="4" class="connectivity_demo_kernel_size_control selected" href="javascript:void(0)">4</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="connectivity_demo_content">
+          <div class="connectivity_demo_text"><span data-index="0">D</span><span data-index="1">e</span><span data-index="2">p</span><span data-index="3">r</span><span data-index="4">i</span><span data-index="5">v</span><span data-index="6">e</span><span data-index="7">d</span><span data-index="8">&nbsp;</span><span data-index="9">o</span><span data-index="10">f</span><span data-index="11">&nbsp;</span><span data-index="12">r</span><span data-index="13">o</span><span data-index="14">o</span><span data-index="15">t</span><span data-index="16">,</span><span data-index="17">&nbsp;</span><span data-index="18">a</span><span data-index="19">n</span><span data-index="20">d</span><span data-index="21">&nbsp;</span><span data-index="22">b</span><span data-index="23">r</span><span data-index="24">a</span><span data-index="25">n</span><span data-index="26">c</span><span data-index="27">h</span><span data-index="28">&nbsp;</span><span data-index="29">a</span><span data-index="30">n</span><span data-index="31">d</span><span data-index="32">&nbsp;</span><span data-index="33">r</span><span data-index="34">i</span><span data-index="35">n</span><span data-index="36">d</span><span data-index="37">,</span><span data-index="38"><br></span><span data-index="39">Y</span><span data-index="40">e</span><span data-index="41">t</span><span data-index="42">&nbsp;</span><span data-index="43">f</span><span data-index="44">l</span><span data-index="45">o</span><span data-index="46">w</span><span data-index="47">e</span><span data-index="48">r</span><span data-index="49">s</span><span data-index="50">&nbsp;</span><span data-index="51">I</span><span data-index="52">&nbsp;</span><span data-index="53">b</span><span data-index="54">e</span><span data-index="55">a</span><span data-index="56">r</span><span data-index="57">&nbsp;</span><span data-index="58">o</span><span data-index="59">f</span><span data-index="60">&nbsp;</span><span data-index="61">e</span><span data-index="62">v</span><span data-index="63">e</span><span data-index="64">r</span><span data-index="65">y</span><span data-index="66">&nbsp;</span><span data-index="67">k</span><span data-index="68">i</span><span data-index="69">n</span><span data-index="70">d</span><span data-index="71">:</span><span data-index="72"><br></span><span data-index="73">A</span><span data-index="74">n</span><span data-index="75">d</span><span data-index="76">&nbsp;</span><span data-index="77">s</span><span data-index="78">u</span><span data-index="79">c</span><span data-index="80">h</span><span data-index="81">&nbsp;</span><span data-index="82">i</span><span data-index="83">s</span><span data-index="84">&nbsp;</span><span data-index="85">m</span><span data-index="86">y</span><span data-index="87">&nbsp;</span><span data-index="88">p</span><span data-index="89">r</span><span data-index="90">o</span><span data-index="91">l</span><span data-index="92">i</span><span data-index="93">f</span><span data-index="94">i</span><span data-index="95">c</span><span data-index="96">&nbsp;</span><span data-index="97">p</span><span data-index="98">o</span><span data-index="99">w</span><span data-index="100">e</span><span data-index="101">r</span><span data-index="102">,</span><span data-index="103"><br></span><span data-index="104">T</span><span data-index="105">h</span><span data-index="106">e</span><span data-index="107">y</span><span data-index="108">&nbsp;</span><span data-index="109">b</span><span data-index="110">l</span><span data-index="111">o</span><span data-index="112">o</span><span data-index="113">m</span><span data-index="114">&nbsp;</span><span data-index="115">i</span><span data-index="116">n</span><span data-index="117">&nbsp;</span><span data-index="118">l</span><span data-index="119">e</span><span data-index="120">s</span><span data-index="121">s</span><span data-index="122">&nbsp;</span><span data-index="123">t</span><span data-index="124">h</span><span data-index="125">a</span><span data-index="126">n</span><span data-index="127">&nbsp;</span><span data-index="128">h</span><span data-index="129">a</span><span data-index="130">l</span><span data-index="131">f</span><span data-index="132">&nbsp;</span><span data-index="133">a</span><span data-index="134">n</span><span data-index="135">&nbsp;</span><span data-index="136">h</span><span data-index="137">o</span><span data-index="138">u</span><span data-index="139">r</span><span data-index="140">;</span></div>
+          <div class="connectivity_demo_loading hidden"></div>
+          <p>This is an interactive visualization, select the appropriate architecture
+            and hover over individual characters.</p>
+        </div>
+      </div>
+    </figure>
+
+    <h3>Pythonic Shakespeare/Pythonic Tom Sawyer?</h3>
+
+    <p>
+      For the purpose of visualizing the model's predictions, I have exported a model
+      to run in the browser using TensorFlow.js. The model being used here is a one layer QRNN with ifo
+      pooling and a kernel size of 4. The network overall has 878,179 parameters. The visualization
+      initially allows setting a prompt, clicking "Start" starts the prediction. For Shakespeare with
+      some Python mixed in, try the provided configuration of a weight of 0.7 for shakespeare and 0.3
+      for Python.
+    </p>
+
+    <figure id="conditional_char_figure">
+      <div id="conditional_char_controls">
+        <div id="conditional_char_controls_left">
+          <div class="conditional_char_control">
+            <div class="conditional_char_control_title">Shakespeare</div>
+            <input type="range" min="0" max="1" step="0.01">
+          </div>
+          <div class="conditional_char_control">
+            <div class="conditional_char_control_title">Python</div>
+            <input type="range" min="0" max="1" step="0.01">
+          </div>
+          <div class="conditional_char_control">
+            <div class="conditional_char_control_title">Mark Twain</div>
+            <input type="range" min="0" max="1" step="0.01">
+          </div>
+          <div class="conditional_char_control">
+            <div class="conditional_char_control_title">Jonathan Swift</div>
+            <input type="range" min="0" max="1" step="0.01">
+          </div>
+        </div>
+        <div id="conditional_char_controls_right">
+          <button>Start</button>
+          <button>Reset</button>
+        </div>
+      </div>
+      <pre id="conditional_char_root"></pre>
+      <figcaption>Initially, the text is ediable for modifying.
+        The slider values can be changed to specify the condition weights
+        for different datasets.
+        Clicking "Start" freezes the prompt and starts prediction.
+        Clicking "Reset" stops prediction and makes the text editable again, as well
+        as unfreezes the sliders to change condition weights.
+      </figcaption>
+    </figure>
+
+    <h2>Text Classification</h2>
+
+    <p>In this section, I try to train QRNNs to learn more abstract concepts than just characters.
+      The problem explored in this section is training a sentiment classifier using the Stanford
+      Sentiment Treebank dataset. In this work, a preprocessed version of the dataset with
+      ~67000 sentences in the train set and 872 sentences in the validation set is used,
+      and is provided by the <a href="https://www.tensorflow.org/datasets/catalog/glue#gluesst2"
+        rel="noopener noreferrer">TensorFlow datasets catalog</a>.
+    </p>
+
+    <p>Model visualization and interpretation for Machine Learning has quickly evolved into
+      a subfield of its own, with a multitude of proposed methods. Visualizing predictions for
+      recurrent architectures has historically relied on computing cell activation based
+      statistics, or gradient based attribution methods. For this work, I use Contextual
+      Decomposition<d-cite key="murdoch2018beyond"></d-cite>, a technique that relies
+      on decomposing the predictions of a neural network in order to figure out the
+      contribution for a specific set of features.
+    </p>
+
+    <p>The main goal here is that as shown for LSTMs in the
+      Contextual Decomposition work<d-cite key="murdoch2018beyond"></d-cite>,
+      QRNNs are also capable of learning meaningful and interpretable
+      intermediate interactions across inputs, similar to LSTMs.</p>
+
+    <h3>Contextual Decomposition</h3>
+
+    <p>A neural network can be viewed as a set of consecutive functions operating on a set of inputs</p>
+
+    <d-math block="block">
+      g(x) = g^l(g^{l - 1}(g^{l - 2}(...g^2(g^1(x)))))
+    </d-math>
+
+    <p>
+      Contextual decomposition relies on first decomposing the input into two parts, a relevant part
+      <d-math>x_{\beta}</d-math> and an irrelevant part <d-math>x_{\gamma}</d-math>, such that</p>
+
+    <d-math block="block">x = x_{\beta} + x_{\gamma}</d-math>
+
+    <p>Then, the decomposed output is passed through the individual layers such that each layer has
+      two outputs, <d-math>g^l_{\beta}(x)</d-math> and <d-math>g^l_{\gamma}(x)</d-math>, such that
+    </p>
+
+    <d-math block="block">
+      g^l(x) = g^l_{\beta}(x) + g^l_{\gamma}(x)
+    </d-math>
+
+    <p>The original work defines the decomposition for Long-Short Term Memory networks. Followup
+      work on Agglomerative Contextual Decomposition<d-cite key="singh2018hierarchical"></d-cite>
+      generalizes the idea to convolutions, max-pooling and linear layers.
+      In this work, the same decompositions have been used.
+    </p>
+
+    <p>A Convolution layer, with kernel <d-math>W</d-math> and bias <d-math>b</d-math>,
+      with inputs <d-math>x_{\beta}</d-math> and <d-math>x_{\gamma}</d-math> is decomposed as</p>
+
+    <d-math block="block">
+      g_{\beta}(x) = W * x_{\beta} + \frac{\left\vert W * x_{\beta} \right\vert}{\left\vert W * x_{\beta} \right\vert +
+      \left\vert W * x_{\gamma} \right\vert} \times b
+    </d-math>
+
+    <d-math block="block">
+      g_{\gamma}(x) = W * x_{\gamma} + \frac{\left\vert W * x_{\gamma} \right\vert}{\left\vert W * x_{\beta} \right\vert
+      + \left\vert W * x_{\gamma} \right\vert} \times b
+    </d-math>
+
+    <p>A Linear layer with a kernel <d-math>W</d-math> and bias <d-math>b</d-math> is similarly decomposed as</p>
+
+    <d-math block="block">
+      g_{\beta}(x) = W \cdot x_{\beta} + \frac{\left\vert W \cdot x_{\beta} \right\vert}{\left\vert W \cdot x_{\beta}
+      \right\vert + \left\vert W \cdot x_{\gamma} \right\vert} \times b
+    </d-math>
+
+    <d-math block="block">
+      g_{\gamma}(x) = W \cdot x_{\gamma} + \frac{\left\vert W \cdot x_{\gamma} \right\vert}{\left\vert W \cdot x_{\beta}
+      \right\vert + \left\vert W \cdot x_{\gamma} \right\vert} \times b
+    </d-math>
+
+    <p>Decomposition for normalization layers is introduced here, and is based off of the
+      decomposition scheme for dense and convolution layers. Let the normalization layer
+      multiplicative parameter be <d-math>N_{\sigma}</d-math> and additive parameter be
+      <d-math>N_{\mu}</d-math>,</p>
+
+    <d-math block="block">
+      \mu_{x_{\beta}} = mean(x_{\beta})
+    </d-math>
+
+    <d-math block="block">
+      \mu_{x_{\gamma}} = mean(x_{\gamma})
+    </d-math>
+
+    <d-math block="block">
+      \sigma_{x}^2 = variance(x_{\beta} + x_{\gamma})
+    </d-math>
+
+    <d-math block="block">
+      a_{x_{\beta}} = \frac{x_{\beta} - \mu_{x_{\beta}}}{sqrt(\sigma_x^2 + \epsilon)} \times N_{\sigma}
+    </d-math>
+
+    <d-math block="block">
+      a_{x_{\gamma}} = \frac{x_{\gamma} - \mu_{x_{\gamma}}}{sqrt(\sigma_x^2 + \epsilon)} \times N_{\sigma}
+    </d-math>
+
+    <d-math block="block">
+      g_{\beta}(x) = a_{x_{\beta}} + \frac{\left\vert a_{x_{\beta}} \right\vert}{\left\vert a_{x_{\beta}} \right\vert + \left\vert a_{x_{\gamma}} \right\vert} \times N_{\mu}
+    </d-math>
+
+    <d-math block="block">
+      g_{\gamma}(x) = a_{x_{\gamma}} + \frac{\left\vert a_{x_{\gamma}} \right\vert}{\left\vert a_{x_{\beta}} \right\vert + \left\vert a_{x_{\gamma}} \right\vert} \times N_{\mu}
+    </d-math>
+
+    <p>Pooling layers are decomposed simply by separating the multiplicative interactions
+      for relevent and irrelevant terms. For pooling, only the inputs are decomposed,
+      the gate activations are used as-is, as that provided better results during
+      experimentation.
+    </p>
+
+    <h4>f-pooling</h4>
+
+    <d-math block="block">
+      <!-- https://katex.org/docs/supported.html#environments -->
+      \begin{aligned}
+        h^l_t &= f^l_t \odot h^l_{t - 1} + (1 - f^l_t) \odot z^l_t \\
+              &= f^l_t \odot [(h^l_{\beta})_{t - 1} + (h^l_{\gamma})_{t - 1}] + (1 - f^l_t) \odot [(z^l_{\beta})_t + (z^l_{\gamma})_t] \\
+              &= [f^l_t \odot (h^l_{\beta})_{t - 1} + (1 - f^l_t) \odot (z^l_{\beta})_t] + [f^l_t \odot (h^l_{\gamma})_{t - 1} + (1 - f^l_t) \odot (z^l_{\gamma})_t] \\
+              &= (h^l_{\beta})_t + (h^l_{\gamma})_t
+      \end{aligned}
+    </d-math>
+
+    <h4>fo-pooling</h4>
+
+    <d-math block="block">
+      <!-- https://katex.org/docs/supported.html#environments -->
+      \begin{aligned}
+        c^l_t &= f^l_t \odot c^l_{t - 1} + (1 - f^l_t) \odot z^l_t \\
+              &= f^l_t \odot [(c^l_{\beta})_{t - 1} + (c^l_{\gamma})_{t - 1}] + (1 - f^l_t) \odot [(z^l_{\beta})_t + (z^l_{\gamma})_t] \\
+              &= [f^l_t \odot (c^l_{\beta})_{t - 1} + (1 - f^l_t) \odot (z^l_{\beta})_t] + [f^l_t \odot (c^l_{\gamma})_{t - 1} + (1 - f^l_t) \odot (z^l_{\gamma})_t] \\
+              &= (c^l_{\beta})_t + (c^l_{\gamma})_t
+      \end{aligned}
+    </d-math>
+
+    <d-math block="block">
+      \begin{aligned}
+        h^l_t &= o^l_t \odot [(c^l_{\beta})_t + (c^l_{\gamma})_t] \\
+              &= [o^l_t \odot (c^l_{\beta})_t] + [o^l_t \odot (c^l_{\gamma})_t] \\
+              &= (h^l_{\beta})_t + (h^l_{\gamma})_t
+      \end{aligned}
+    </d-math>
+
+    <h4>ifo-pooling</h4>
+
+    <d-math block="block">
+      <!-- https://katex.org/docs/supported.html#environments -->
+      \begin{aligned}
+        c^l_t &= f^l_t \odot c^l_{t - 1} + i^l_t \odot z^l_t \\
+              &= f^l_t \odot [(c^l_{\beta})_{t - 1} + (c^l_{\gamma})_{t - 1}] + i^l_t \odot [(z^l_{\beta})_t + (z^l_{\gamma})_t] \\
+              &= [f^l_t \odot (c^l_{\beta})_{t - 1} + i^l_t \odot (z^l_{\beta})_t] + [f^l_t \odot (c^l_{\gamma})_{t - 1} + i^l_t \odot (z^l_{\gamma})_t] \\
+              &= (c^l_{\beta})_t + (c^l_{\gamma})_t
+      \end{aligned}
+    </d-math>
+
+    <d-math block="block">
+      \begin{aligned}
+        h^l_t &= o^l_t \odot [(c^l_{\beta})_t + (c^l_{\gamma})_t] \\
+              &= [o^l_t \odot (c^l_{\beta})_t] + [o^l_t \odot (c^l_{\gamma})_t] \\
+              &= (h^l_{\beta})_t + (h^l_{\gamma})_t
+      \end{aligned}
+    </d-math>
+
+    <p>Activation Layers are decomposed using linearization. For <d-math>g</d-math> as both
+      sigmoid and tanh</p>
+
+    <d-math block="block">
+      g(x_{\beta} + x_{\gamma}) = L_g(x_{\beta}) + L_g(x_{\gamma})
+    </d-math>
+
+    <d-math block="block">
+      g_{\beta}(x) = L_g(x_{\beta})
+    </d-math>
+
+    <d-math block="block">
+      g_{\gamma}(x) = L_g(x_{\gamma})
+    </d-math>
+
+    <h4>Linearizing Activation Functions</h4>
+
+    <p>
+      For a given function <d-math>f</d-math>, we need to find a function
+      <d-math>L_f</d-math> such that</p>
+
+    <d-math block="block">
+      f(\sum_{i=1}^{N} x_i) = \sum_{i=1}^{N} L_f(x_i)
+    </d-math>
+
+    <p>Let there be <d-math>M</d-math> possible permutations for the
+      expression <d-math>\sum_{i=1}^{N} x_i</d-math> denoted by
+      <d-math>\pi_1</d-math>, <d-math>\pi_2</d-math>, ..., <d-math>\pi_m</d-math>,
+      then,</p>
+
+    <d-math block="block">
+      L_f(x_k) = \frac{1}{M} \sum_{i=1}^{M} [ tanh(\sum_{j = 1}^{\pi_i(k)} y_{\pi_i(j)}) - tanh(\sum_{j = 1}^{\pi_i(k) -
+      1} y_{\pi_i(j)}) ]
+    </d-math>
+
+    <p>As <d-math>N</d-math> is only <d-math>2</d-math> for our use cases, the equation takes very simple forms</p>
+
+    <d-math block="block">
+      g(x) = tanh(x_{\beta} + x_{\gamma})
+    </d-math>
+
+    <d-math block="block">
+      L_{tanh}(x_{\beta}) = \frac{1}{2} [(tanh(x_{\beta}) - tanh(0)) + (tanh(x_{\gamma} + x_{\beta}) - tanh(x_{\gamma}))]
+    </d-math>
+
+    <d-math block="block">
+      L_{tanh}(x_{\gamma}) = \frac{1}{2} [(tanh(x_{\beta} + x_{\gamma}) - tanh(x_{\beta})) + (tanh(x_{\gamma}) - tanh(0))]
+    </d-math>
+
+    <h3>Agglomerative Contextual Decomposition</h3>
+
+    <p>Agglomerative Contextual Decomposition<d-cite key="singh2018hierarchical"></d-cite> is a
+    technique to employ Agglomerative clustering on individual contextual decomposition
+    scores in order to build a hierarchy of concepts.</p>
+
+    <p>The idea is the same as agglomerative clustering, except done with Contextual Decomposition
+      scores. We pick the top components and connect neighbouring components, and keep repeating
+      the process until there is only one component left.
+    </p>
+
+    <h3>Experiments</h3>
+
+    <p>The trained model has a single IFO pooled QRNN layer, with a kernel size of 4.
+    The inputs were space tokenized with a vocabulary size of 14311, and the final
+    state output from the QRNN was connected to a linear layer with 2 outputs.</p>
+
+    <p>The network used here is effectively the network used in the previous section, with the major
+      difference being that the vocabulary size is increased from 99 to 14311, and instead of using
+      one-hot encoding, an embedding layer is used to vectorize the input tokens, and there are only
+      2 outputs.
+    </p>
+
+    <p>Instead of padding all inputs to a fixed sequence length, the network is trained using the
+      <a href="https://www.tensorflow.org/api_docs/python/tf/data/Dataset#padded_batch">padded_batch</a> approach.
+      Following a shuffle, <d-math>batch\_size</d-math> elements are selected, and are batched to the length
+      of the longest sequence in the batch. Because the batch step follows a shuffle, all batches, even across
+      epochs end up having variadic lengths. Train logs are available on
+      <a href="https://tensorboard.dev/experiment/eIKo2EHASoSG978jqK3bEQ/" target="_blank"
+        rel="noopener noreferrer">TensorBoard.dev</a>.
+      The model used in all the visualizations was exported at the 12th epoch and has a 84.4% validation
+      accuracy.
+    </p>
+
+    <p>The "score" used to visualize the predictions is the difference between the logits
+      for the positive sentiment and the negative sentiment, from the final layer. When the
+      prediction is positive, the logit for the positive sentiment is greater, and score
+      is greater than zero, while when the prediction is negative, the logit for the
+      negative sentiment is greater, and the score is less than zero.
+    </p>
+
+    <p>Standalone Contextual Decomposition can be used to separate different sections
+      of the input and try to compute their contribution to the final prediction.
+    </p>
+
+    <figure id="contextual_decomposition_sst_demo">
+      <svg></svg>
+      <figcaption>Trying to visualize interactions for two different sections in an input.
+        The idea and input taken directly from <d-cite key="murdoch2018beyond"></d-cite>,
+        which has more visualizations but for different model interpretation schemes
+        for LSTMs.
+      </figcaption>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/1i-DA6DfsaoiosowS7tZfMueXFtDCzyAN" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>We can also use Agglomerative Contextual
+      Decomposition<d-cite key="singh2018hierarchical"></d-cite>
+      in order to visualize how different sections of the input
+      contribute to the overall prediction.
+    </p>
+
+    <p>We first visualize some predictions from the validation set
+      that the model gets right.</p>
+
+    <figure id="classification_acd_correct_figure">
+      <div id="classification_acd_correct_svgs" class="classification_acd_svgs">
+        <div class="classification_acd_demo selected">
+          <div><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div style="transform: translate(-15%, -10%) scale(0.75);"><svg></svg></div>
+        </div>
+      </div>
+      <figcaption style="display: flex">
+        <div class="classification_acd_svg_captions">
+          <div class="classification_acd_svg_caption selected">
+            The prediction starts positive, but the
+            <b><i>is nothing new</i></b> at the end makes the prediction negative.
+          </div>
+          <div class="classification_acd_svg_caption">
+            The model clearly identifies <b><i>serving sara doesn't serve</i></b>
+            as negative, and <b><i>a whole lot of laughs</i></b> as positive. Then, it
+            correctly predicts the combination as negative.
+          </div>
+          <div class="classification_acd_svg_caption">
+            The model determines <b><i>a taut psychological thriller
+            that doesn't waste a moment</i></b> to be positive, and
+            <b><i>two hour running time</i></b>
+            to be negative, but merges them correctly so that the overall
+            prediction is positive.
+          </div>
+        </div>
+      </figcaption>
+      <div class="svg_current_figure_controls">
+        <div class="svg_current_figure_controls_container">
+          <a href="javascript:void(0)" class="svg_figure_current_control selected" data-value="1">1</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="2">2</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="3">3</a>
+        </div>
+      </div>
+      <figcaption>Click on the above numbers to change the visualized figure.</figcaption>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/13WPqunT9lRC_A8KrI1yKNnN5IpqFEbJs" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>A more interesting idea is to visualize the predictions that the model gets wrong,
+      and try to figure out what biases might have crept in during training that are
+      contributing to the incorrect predictions.
+    </p>
+
+    <figure id="classification_acd_incorrect_figure">
+      <div id="classification_acd_incorrect_svgs" class="classification_acd_svgs">
+        <div class="classification_acd_demo selected">
+          <div><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div style="transform: translate(-15%, -10%) scale(0.75);"><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div style="transform: translate(-20%, -10%) scale(0.75);"><svg></svg></div>
+        </div>
+        <div class="classification_acd_demo">
+          <div><svg></svg></div>
+        </div>
+      </div>
+      <figcaption style="display: flex">
+        <div class="classification_acd_svg_captions">
+          <div class="classification_acd_svg_caption selected">
+            The model clearly identifies
+            <b><i>serving sara doesn't serve</i></b>
+            as negative, and
+            <b><i>a whole lot of laughs</i></b> as positive.
+            Then, it correctly predicts the combination as negative.</div>
+          <div class="classification_acd_svg_caption">
+            The model identifies the phrase
+            <b><i>'em up scenes</i></b> as extremely positive
+            and uses that to assign the overall probability to be positive.
+          </div>
+          <div class="classification_acd_svg_caption">
+            The model realizes that <b><i>mcconaughey 's fun to watch</i></b>
+            is positive, <b><i>the dragons are okay</i></b> is neutral, and
+            <b><i>not much fire in the script .</i></b> is negative, but the
+            positive ends up outweighing the negative for the overall prediction
+            to be positive.
+          </div>
+          <div class="classification_acd_svg_caption">
+            This is hard to interpret. <b><i>lazy</i></b> does contribute
+            negatively, but is eventually drowned out.
+          </div>
+          <div class="classification_acd_svg_caption">
+            The model doesn't even pick up that
+            <b><i>good stupid fun</i></b> is actually positive.
+          </div>
+        </div>
+      </figcaption>
+      <div class="svg_current_figure_controls">
+        <div class="svg_current_figure_controls_container">
+          <a href="javascript:void(0)" class="svg_figure_current_control selected" data-value="1">1</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="2">2</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="3">3</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="4">4</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="5">5</a>
+        </div>
+      </div>
+      <figcaption>Click on the above numbers to change the visualized figure.</figcaption>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/13WPqunT9lRC_A8KrI1yKNnN5IpqFEbJs" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>
+      I have provided notebooks that should allow testing the model
+      for other inputs, as well as training new models from the provided
+      source code.
+    </p>
+
+    <h2>Handwriting</h2>
+
+    <p>In this section, I try to visualize what QRNN based models learn when trained
+      for handwriting prediction and synthesis. The idea is effectively borrowed
+      from <d-cite key="carter2016experiments"></d-cite>. A good motivation of why
+      this type of experiment helps with understanding sequence modelling is also
+      illustrated by <a href="https://www.youtube.com/watch?v=-yX1SYeDHbg">Alex Graves in a lecture
+      delivered at the University of Oxford and available on YouTube</a> .
+    </p>
+
+    <h3>Prediction</h3>
+
+    <p>First, I train a model for unconditioned, autoregressive prediction. The idea
+      is the same as <d-cite key="carter2016experiments"></d-cite>. The inputs are a
+      sequence of 3-dimensional points, representing the x, y coordinates, and an end
+      of sequence token, and the output is the parameters of a bivariate gaussian
+      mixture model. The loss is the negative log-likelihood of the next point
+      being in the probability density functions of the predicted distributions,
+      times the probability of the distributions themselves.
+    </p>
+
+    <p>The network used here consists of an input layer, followed by
+      two QRNN layers connected in a densenet like fashion, followed
+      by a dense layer also connected in a densenet like fashion. The model
+      overall has 907,524 parameters.
+    </p>
+
+    <p>First, Visualizing the predictions of the model itself.</p>
+
+    <figure id="handwriting_prediction_figure">
+      <svg id="handwriting_prediction_diagram" width="600" height="100"></svg>
+      <div id="handwriting_prediction_controls">
+        <button>Play/Pause</button>
+      </div>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/1NWuLWCYR8FLZtfW1MKUmUcgTm792Yg1f" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>As with LSTMs, we can see coherent characters, and in some cases real words forming.</p>
+
+    <p>We can also sample and visualize multiple predictions at each point,
+      in order to figure out how certain the model is about it's predictions in
+      a particular state.</p>
+
+    <p>I generated 32 predictions at each point, and visualized them. At each timestep, the
+      model decides to go with the first prediction. The orange strokes are predictions left
+      to the chosen one, while the green strokes are predictions to the right.
+    </p>
+
+    <figure id="handwriting_prediction_images_figure">
+      <div class="figure_images">
+        <div class="figure_image selected"></div>
+        <div class="figure_image"></div>
+        <div class="figure_image"></div>
+      </div>
+      <div class="svg_current_figure_controls">
+        <div class="svg_current_figure_controls_container">
+          <a href="javascript:void(0)" class="svg_figure_current_control selected" data-value="1">1</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="2">2</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="3">3</a>
+        </div>
+      </div>
+      <figcaption>Click on the above numbers to change the visualized figure.</figcaption>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/1NWuLWCYR8FLZtfW1MKUmUcgTm792Yg1f" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>At the start of the strokes, predictions are available for all directions,
+      however in the middle, predictions tend to be in the same direction.
+    </p>
+
+    <h3>Synthesis</h3>
+
+    <p>In order to train for handwriting synthesis in parallel, we extend the offset-text
+      attention mechanism formulated by Graves in his paper<d-cite key="graves2013generating"></d-cite>.
+      The main difference is that because we are training on multiple timesteps in parallel,
+      we use `tf.math.cumsum` to accumulate the predicted <d-math>\kappa</d-math> values
+      at each timestep. During prediction, we can revert back to the traditional formulation
+      where <d-math>\kappa</d-math> values are a state parameter returned at each timestep
+      for input to the next one.
+    </p>
+
+    <p>
+      The network used to train for this used a 13 layer QRNN with FO Pooling.
+      The input was followed by a QRNN, which was followed by a 4 layer
+      QRNN block with a residual connection. Then, there was the offset-text
+      attention block, which was followed by a couple of blocks of 4 layer QRNNs
+      and finally a dense layer for the output.
+    </p>
+
+    <p>
+      All QRNN layers had 256 filters, with the full network containing 9,787,889
+      parameters.
+    </p>
+
+    <p>For the input text <b><i>from his travels it might have been</i></b>, following are examples
+    of generated strokes, as well as the window weights between the text and the generated strokes.</p>
+
+    <figure id="handwriting_synthesis_images_figure">
+      <div class="figure_images">
+        <div class="figure_image selected">
+          <div class="strokes"></div>
+          <div class="graph"></div>
+        </div>
+        <div class="figure_image">
+          <div class="strokes"></div>
+          <div class="graph"></div>
+        </div>
+        <div class="figure_image">
+          <div class="strokes"></div>
+          <div class="graph"></div>
+        </div>
+        <div class="figure_image">
+          <div class="strokes"></div>
+          <div class="graph"></div>
+        </div>
+        <div class="figure_image">
+          <div class="strokes"></div>
+          <div class="graph"></div>
+        </div>
+      </div>
+      <div class="svg_current_figure_controls">
+        <div class="svg_current_figure_controls_container">
+          <a href="javascript:void(0)" class="svg_figure_current_control selected" data-value="1">1</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="2">2</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="3">3</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="4">4</a>
+          <a href="javascript:void(0)" class="svg_figure_current_control" data-value="5">5</a>
+        </div>
+      </div>
+      <figcaption>Click on the above numbers to change the visualized figure.</figcaption>
+      <a class="reproduce_in_colab" href="https://colab.research.google.com/drive/1w4VElUP7VbYg5wSFFObceaFnEKaeGlUf" target="_blank" rel="noopener noreferrer">
+        <span>Reproduce in a</span>
+        <span><img src="/static/images/colab.svg" alt="colab"></span>
+        <span>notebook</span>
+      </a>
+    </figure>
+
+    <p>I have provided trained models for reproducibility, as well as notebooks.</p>
+
+  </d-article>
+
+  <d-appendix>
+    <h3>Acknowledgments</h3>
+    <p>Google Colaboratory T4/P-100 GPUs and TPUs. All the models, except the text classification
+      one were trained on Free TPUv2 instances provided for free. XLA does not work with variable
+      sequence lengths, hence the classification model was trained on T4.
+    </p>
+
+    <p>The design and source code for the convolution visualizations is adapted
+      from the receptive fields paper<d-cite key="araujo2019computing"></d-cite>
+    </p>
+
+    <d-footnote-list></d-footnote-list>
+    <d-citation-list></d-citation-list>
+  </d-appendix>
+
+  <d-bibliography src="static/bibliography.bib"></d-bibliography>
+
+  <script src="index.js"></script>
+</body>
+
+</html>

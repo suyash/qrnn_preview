@@ -1,0 +1,2045 @@
+.hidden {
+  display: none !important;
+}
+
+.architecture-figure .step {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.architecture-figure .step.visible {
+  opacity: 1;
+}
+
+.architecture-links {
+  display: flex;
+  justify-content: center;
+}
+
+.architecture-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid black;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  margin: 0 0.5rem;
+}
+
+.architecture-link.selected {
+  width: 40px;
+  height: 40px;
+  border: 4px double black;
+}
+
+.architecture-links + footer {
+  color: #888;
+  padding: 0.5rem 0 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.architecture-figure {
+  margin-bottom: 0;
+}
+
+.connectivity_demo_content {
+  position: relative;
+  padding: 0.5rem;
+}
+
+.connectivity_demo_content > p {
+  color: #888;
+  padding: 0.5rem 0 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.0rem;
+}
+
+.connectivity_demo_loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.connectivity_demo_controls {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.connectivity_demo_pooling_controls, .connectivity_demo_kernel_size_controls {
+  display: flex;
+  flex-direction: column;
+}
+
+.connectivity_demo_control_links {
+  display: flex;
+}
+
+.connectivity_demo_pooling_control,
+.connectivity_demo_kernel_size_control,
+.svg_figure_current_control {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-bottom: none;
+  padding: 0.5rem;
+}
+
+
+.connectivity_demo_pooling_control.selected,
+.connectivity_demo_kernel_size_control.selected,
+.svg_figure_current_control.selected {
+  border-bottom: 1px solid black;
+}
+
+.connectivity_demo_control_title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.connectivity_demo_kernel_size_controls {
+  margin-left: auto;
+  margin-right: 2rem;
+}
+
+.connectivity_demo_text span {
+  font-family: "Source Code Pro", "Monaco", 'Courier New', Courier, monospace;
+  cursor: default;
+}
+
+.connectivity_demo_text span.active {
+  border-bottom: 2px solid black;
+}
+
+#autoregressive-figure {
+  transform: rotate(180deg) scale(-1, 1);
+}
+
+#autoregressive-diagram #t-1_4_0 {
+  animation-duration: 25s;
+  animation-name: a-1_4_0;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a-1_4_0 {
+  from {
+      opacity: 0;
+  }
+
+  4% {
+      opacity: 0;
+  }
+
+  8% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t0_1_2 {
+  animation-duration: 25s;
+  animation-name: a0_1_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_1_2 {
+  from {
+      transform: translateY(-40px);
+  }
+
+  4% {
+      transform: translateY(0);
+  }
+
+  24% {
+      transform: translateX(0px) translateY(0);
+  }
+
+  28% {
+      transform: translateX(120px) translateY(0);
+  }
+
+  48% {
+      transform: translateX(120px) translateY(0);
+  }
+
+  52% {
+      transform: translateX(240px) translateY(0);
+  }
+
+  to {
+      transform: translateX(240px) translateY(0);
+  }
+}
+
+#autoregressive-diagram #t0_1_0 {
+  animation-duration: 25s;
+  animation-name: a0_1_0;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_1_0 {
+  from {
+      opacity: 0;
+  }
+
+  4% {
+      opacity: 0;
+  }
+
+  8% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t0_1_1 {
+  animation-duration: 25s;
+  animation-name: a0_1_1;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_1_1 {
+  from {
+      opacity: 0;
+  }
+
+  4% {
+      opacity: 0;
+  }
+
+  8% {
+      opacity: 1;
+  }
+
+  24% {
+      opacity: 1;
+      transform: translateX(0px);
+  }
+
+  28% {
+      opacity: 1;
+      transform: translateX(120px);
+  }
+
+  to {
+      opacity: 1;
+      transform: translateX(120px);
+  }
+}
+
+#autoregressive-diagram #t0_conv {
+  animation-duration: 25s;
+  animation-name: a0_conv;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_conv {
+  from {
+      opacity: 0;
+  }
+
+  8% {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t0_2 {
+  animation-duration: 25s;
+  animation-name: a0_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_2 {
+  from {
+      opacity: 0;
+  }
+
+  8% {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t0_ln {
+  animation-duration: 25s;
+  animation-name: a0_ln;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_ln {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 0;
+  }
+
+  14% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t0_3 {
+  animation-duration: 25s;
+  animation-name: a0_3;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_3 {
+  from {
+      opacity: 0;
+  }
+
+  14% {
+      opacity: 0;
+  }
+
+  18% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t0_act {
+  animation-duration: 25s;
+  animation-name: a0_act;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_act {
+  from {
+      opacity: 0;
+  }
+
+  18% {
+      opacity: 0;
+  }
+
+  20% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t0_state {
+  animation-duration: 25s;
+  animation-name: a0_state;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_state {
+  from {
+      opacity: 0;
+  }
+
+  18% {
+      opacity: 0;
+  }
+
+  20% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t0_4 {
+  animation-duration: 25s;
+  animation-name: a0_4;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a0_4 {
+  from {
+      opacity: 0;
+  }
+
+  20% {
+      opacity: 0;
+  }
+
+  24% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t1_1_0 {
+  animation-duration: 25s;
+  animation-name: a1_1_0;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_1_0 {
+  from {
+      transform: translateY(-40px);
+  }
+
+  28% {
+      transform: translateY(-40px);
+  }
+
+  32% {
+      transform: translateY(0);
+  }
+
+  48% {
+      opacity: 1;
+      transform: translateX(0px) translateY(0);
+  }
+
+  52% {
+      opacity: 1;
+      transform: translateX(120px) translateY(0);
+  }
+
+  72% {
+      opacity: 1;
+      transform: translateX(120px) translateY(0);
+  }
+
+  76% {
+      opacity: 1;
+      transform: translateX(240px) translateY(0);
+  }
+
+  to {
+      opacity: 1;
+      transform: translateX(240px) translateY(0);
+  }
+}
+
+#autoregressive-diagram #t1_conv {
+  animation-duration: 25s;
+  animation-name: a1_conv;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_conv {
+  from {
+      opacity: 0;
+  }
+
+  32% {
+      opacity: 0;
+  }
+
+  36% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t1_2 {
+  animation-duration: 25s;
+  animation-name: a1_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_2 {
+  from {
+      opacity: 0;
+  }
+
+  32% {
+      opacity: 0;
+  }
+
+  36% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t1_ln {
+  animation-duration: 25s;
+  animation-name: a1_ln;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_ln {
+  from {
+      opacity: 0;
+  }
+
+  36% {
+      opacity: 0;
+  }
+
+  38% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t1_3 {
+  animation-duration: 25s;
+  animation-name: a1_3;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_3 {
+  from {
+      opacity: 0;
+  }
+
+  38% {
+      opacity: 0;
+  }
+
+  42% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t1_act {
+  animation-duration: 25s;
+  animation-name: a1_act;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_act {
+  from {
+      opacity: 0;
+  }
+
+  42% {
+      opacity: 0;
+  }
+
+  44% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t1_state {
+  animation-duration: 25s;
+  animation-name: a1_state;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_state {
+  from {
+      opacity: 0;
+  }
+
+  42% {
+      opacity: 0;
+  }
+
+  44% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t1_4 {
+  animation-duration: 25s;
+  animation-name: a1_4;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a1_4 {
+  from {
+      opacity: 0;
+  }
+
+  44% {
+      opacity: 0;
+  }
+
+  48% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t2_1_0 {
+  animation-duration: 25s;
+  animation-name: a2_1_0;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_1_0 {
+  from {
+      transform: translateY(-40px);
+  }
+
+  52% {
+      transform: translateY(-40px);
+  }
+
+  56% {
+      transform: translateY(0);
+  }
+
+  72% {
+      opacity: 1;
+      transform: translateX(0) translateY(0);
+  }
+
+  76% {
+      opacity: 1;
+      transform: translateX(120px) translateY(0);
+  }
+
+  to {
+      opacity: 1;
+      transform: translateX(120px) translateY(0);
+  }
+}
+
+#autoregressive-diagram #t2_conv {
+  animation-duration: 25s;
+  animation-name: a2_conv;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_conv {
+  from {
+      opacity: 0;
+  }
+
+  56% {
+      opacity: 0;
+  }
+
+  60% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t2_2 {
+  animation-duration: 25s;
+  animation-name: a2_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_2 {
+  from {
+      opacity: 0;
+  }
+
+  56% {
+      opacity: 0;
+  }
+
+  60% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t2_ln {
+  animation-duration: 25s;
+  animation-name: a2_ln;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_ln {
+  from {
+      opacity: 0;
+  }
+
+  60% {
+      opacity: 0;
+  }
+
+  62% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t2_3 {
+  animation-duration: 25s;
+  animation-name: a2_3;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_3 {
+  from {
+      opacity: 0;
+  }
+
+  62% {
+      opacity: 0;
+  }
+
+  66% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t2_act {
+  animation-duration: 25s;
+  animation-name: a2_act;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_act {
+  from {
+      opacity: 0;
+  }
+
+  66% {
+      opacity: 0;
+  }
+
+  68% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t2_state {
+  animation-duration: 25s;
+  animation-name: a2_state;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_state {
+  from {
+      opacity: 0;
+  }
+
+  66% {
+      opacity: 0;
+  }
+
+  68% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t2_4 {
+  animation-duration: 25s;
+  animation-name: a2_4;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a2_4 {
+  from {
+      opacity: 0;
+  }
+
+  68% {
+      opacity: 0;
+  }
+
+  72% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t3_1_0 {
+  animation-duration: 25s;
+  animation-name: a3_1_0;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_1_0 {
+  from {
+      transform: translateY(-40px);
+  }
+
+  76% {
+      transform: translateY(-40px);
+  }
+
+  80% {
+      transform: translateY(0);
+  }
+
+  to {
+      transform: translateY(0);
+  }
+}
+
+#autoregressive-diagram #t3_conv {
+  animation-duration: 25s;
+  animation-name: a3_conv;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_conv {
+  from {
+      opacity: 0;
+  }
+
+  80% {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t3_2 {
+  animation-duration: 25s;
+  animation-name: a3_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_2 {
+  from {
+      opacity: 0;
+  }
+
+  80% {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t3_ln {
+  animation-duration: 25s;
+  animation-name: a3_ln;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_ln {
+  from {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 0;
+  }
+
+  86% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t3_3 {
+  animation-duration: 25s;
+  animation-name: a3_3;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_3 {
+  from {
+      opacity: 0;
+  }
+
+  86% {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t3_act {
+  animation-duration: 25s;
+  animation-name: a3_act;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_act {
+  from {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 0;
+  }
+
+  92% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram #t3_state {
+  animation-duration: 25s;
+  animation-name: a3_state;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_state {
+  from {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 0;
+  }
+
+  92% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#autoregressive-diagram .t3_4 {
+  animation-duration: 25s;
+  animation-name: a3_4;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a3_4 {
+  from {
+      opacity: 0;
+  }
+
+  92% {
+      opacity: 0;
+  }
+
+  96% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram .cd_1_g_1 {
+  transform-origin: 420px 20px;
+  animation-duration: 16s;
+  animation-name: a_cd_1_g_1;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_1_g_1 {
+  from {
+      transform: translate(0, 0) rotate(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translate(0, 0) rotate(0);
+      opacity: 1;
+  }
+
+  36% {
+      transform: translate(0, 0) rotate(0);
+  }
+
+  48% {
+      transform: translate(-225px, 105px) rotate(90deg);
+  }
+
+  60% {
+      transform: translate(-225px, 105px) rotate(90deg);
+      opacity: 1;
+  }
+
+  72% {
+      transform: translate(-185px, 105px) rotate(90deg);
+      opacity: 0;
+  }
+
+  to {
+      transform: translate(-185px, 105px) rotate(90deg);
+      opacity: 0;
+  }
+}
+
+#conditional-norm-diagram #cd_1_g_1_0, #conditional-norm-diagram #cd_1_b_1_0 {
+  stroke-width: 1px;
+}
+
+#conditional-norm-diagram #cd_1_g_1_1, #conditional-norm-diagram #cd_1_b_1_1 {
+  stroke-width: 1px;
+}
+
+#conditional-norm-diagram #cd_1_g_1_2, #conditional-norm-diagram #cd_1_b_1_2 {
+  stroke-width: 1px;
+}
+
+#conditional-norm-diagram #cd_1_g_1_3, #conditional-norm-diagram #cd_1_b_1_3 {
+  stroke-width: 1px;
+}
+
+#conditional-norm-diagram .cd_1_b_1 {
+  transform-origin: 420px 20px;
+  stroke-width: 1px;
+
+  animation-duration: 16s;
+  animation-name: a_cd_1_b_1;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_1_b_1 {
+  from {
+      transform: translate(0, 0) rotate(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translate(0, 0) rotate(0);
+      opacity: 1;
+  }
+
+  36% {
+      transform: translate(0, 0) rotate(0);
+  }
+
+  48% {
+      transform: translate(15px, 105px) rotate(90deg);
+  }
+
+  60% {
+      transform: translate(15px, 105px) rotate(90deg);
+      opacity: 1;
+  }
+
+  72% {
+      transform: translate(55px, 105px) rotate(90deg);
+      opacity: 0;
+  }
+
+  to {
+      transform: translate(55px, 105px) rotate(90deg);
+      opacity: 0;
+  }
+}
+
+#conditional-norm-mul-g {
+  position: absolute;
+  top: 65px;
+  left: 210px;
+
+  animation-duration: 16s;
+  animation-name: a_cond_norm_mul_g;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cond_norm_mul_g {
+  from {
+      opacity: 0;
+  }
+
+  48% {
+      opacity: 0;
+  }
+
+  60% {
+      opacity: 1;
+  }
+
+  72% {
+      opacity: 0;
+  }
+
+  to {
+      opacity: 0;
+  }
+}
+
+#conditional-norm-mul-g > div {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#conditional-norm-mul-b {
+  position: absolute;
+  top: 65px;
+  left: 450px;
+
+  animation-duration: 16s;
+  animation-name: a_cond_norm_mul_b;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cond_norm_mul_b {
+  from {
+      opacity: 0;
+  }
+
+  48% {
+      opacity: 0;
+  }
+
+  60% {
+      opacity: 1;
+  }
+
+  72% {
+      opacity: 0;
+  }
+
+  to {
+      opacity: 0;
+  }
+}
+
+#conditional-norm-mul-b > div, #conditional-norm-lab-b > div, #conditional-norm-lab-g > div {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#conditional-norm-lab-g {
+  position: absolute;
+  top: 65px;
+  left: 365px;
+
+  animation-duration: 16s;
+  animation-name: a_cond_norm_lab_g;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cond_norm_lab_g {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  72% {
+      opacity: 1;
+  }
+
+  84% {
+      opacity: 0;
+  }
+
+  to {
+      opacity: 0;
+  }
+}
+
+#conditional-norm-lab-b {
+  position: absolute;
+  top: 65px;
+  left: 610px;
+
+  animation-duration: 16s;
+  animation-name: a_cond_norm_lab_b;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cond_norm_lab_b {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  72% {
+      opacity: 1;
+  }
+
+  84% {
+      opacity: 0;
+  }
+
+  to {
+      opacity: 0;
+  }
+}
+
+#conditional-norm-diagram #cd_0_1_0, #conditional-norm-diagram #cd_0_1_1 {
+  animation-duration: 16s;
+  animation-name: a_cd_0_1_01;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_0_1_01 {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram #cd_0_1_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_0_1_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_0_1_2 {
+  from {
+      transform: translateY(-40px);
+  }
+
+  12% {
+      transform: translateY(0px);
+  }
+
+  to {
+      transform: translateY(0px);
+  }
+}
+
+#conditional-norm-diagram #cd_conv {
+  animation-duration: 16s;
+  animation-name: a_cd_conv;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_conv {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 0;
+  }
+
+  24% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram .cd_0_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_0_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_0_2 {
+  from {
+      opacity: 0;
+  }
+
+  24% {
+      opacity: 0;
+  }
+
+  36% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram .cd_g_1_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_g_1_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_g_1_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(30px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(30px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_b_1_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_b_1_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_b_1_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(30px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(30px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_g_2_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_g_2_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_g_2_2 {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_b_2_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_b_2_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_b_2_2 {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_g_3_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_g_3_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_g_3_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(-30px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(-30px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_b_3_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_b_3_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_b_3_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(-30px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(-30px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_g_4_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_g_4_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_g_4_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(-60px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(-60px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram .cd_b_4_2 {
+  animation-duration: 16s;
+  animation-name: a_cd_b_4_2;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_b_4_2 {
+  from {
+      transform: translateY(0);
+      opacity: 0;
+  }
+
+  60% {
+      stroke-width: 1px;
+  }
+
+  12% {
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  72% {
+      stroke-width: 1px;
+      transform: translateY(0);
+      opacity: 1;
+  }
+
+  84% {
+      stroke-width: 1px;
+      transform: translateY(-60px);
+      opacity: 0.5;
+  }
+
+  to {
+      stroke-width: 1px;
+      transform: translateY(-60px);
+      opacity: 0.5;
+  }
+}
+
+#conditional-norm-diagram #cd_act {
+  animation-duration: 16s;
+  animation-name: a_cd_act;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_act {
+  from {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram .cd_norm {
+  animation-duration: 16s;
+  animation-name: a_cd_norm;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_norm {
+  from {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-diagram .cd_0_3 {
+  animation-duration: 16s;
+  animation-name: a_cd_0_3;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_0_3 {
+  from {
+      opacity: 0;
+  }
+
+  90% {
+      opacity: 0;
+  }
+
+  100% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-w {
+  position: absolute;
+  top: -30px;
+  left: 360px;
+  display: flex;
+}
+
+#conditional-norm-w > div {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  animation-duration: 16s;
+  animation-name: a_cd_norm_w;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_norm_w {
+  from {
+      opacity: 0;
+  }
+
+  12% {
+      opacity: 1;
+  }
+
+  36% {
+      opacity: 1;
+  }
+
+  48% {
+      opacity: 0;
+  }
+
+  to {
+      opacity: 0;
+  }
+}
+
+#conditional-norm-final-g {
+  position: absolute;
+  top: 95px;
+  left: 365px;
+
+  animation-duration: 16s;
+  animation-name: a_cd_final_g;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_final_g {
+  from {
+      opacity: 0;
+  }
+
+  72% {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-final-g > div {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#conditional-norm-final-b {
+  position: absolute;
+  top: 95px;
+  left: 610px;
+
+  animation-duration: 16s;
+  animation-name: a_cd_final_b;
+  animation-iteration-count: infinite;
+}
+
+@keyframes a_cd_final_b {
+  from {
+      opacity: 0;
+  }
+
+  72% {
+      opacity: 0;
+  }
+
+  84% {
+      opacity: 1;
+  }
+
+  to {
+      opacity: 1;
+  }
+}
+
+#conditional-norm-final-b > div {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mark_twain_demo .connectivity_demo_text {
+  width: 760px;
+}
+
+.svg_current_figure_controls {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+.svg_current_figure_controls_container {
+    display: flex;
+    margin: 0 auto;
+}
+
+.classification_acd_svgs {
+    position: relative;
+}
+
+.classification_acd_demo {
+    position: absolute;
+    visibility: hidden;
+    z-index: -100;
+}
+
+.classification_acd_demo.selected {
+    visibility: visible;
+}
+
+.classification_acd_svg_caption {
+    display: none;
+}
+
+.classification_acd_svg_caption.selected {
+    display: block;
+}
+
+.classification_acd_svg_captions {
+    margin: 0 auto;
+}
+
+#conditional_char_figure {
+    box-sizing: border-box;
+    border-left: 2px solid blue;
+    padding-left: 1rem;
+    width: fit-content;
+}
+
+#conditional_char_controls {
+    display: flex;
+}
+
+#conditional_char_controls_left {
+    display: flex;
+}
+
+#conditional_char_controls_right {
+    display: flex;
+}
+
+.conditional_char_control {
+    width: 8rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#conditional_char_controls_left input[type="range"] {
+    width: 5rem;
+}
+
+#conditional_char_controls_left input[type="range"]:disabled {
+    opacity: 0.5;
+}
+
+#conditional_char_controls_right button {
+    height: 2rem;
+    margin: 0.5rem;
+}
+
+.conditional_char_control_title {
+    font-size: 0.8rem;
+}
+
+.reproduce_in_colab {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid rgba(100, 100, 100, 0.6);
+    margin: 0.5rem 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.reproduce_in_colab img {
+    width: 1.5rem;
+}
+
+#handwriting_prediction_images_figure .figure_image {
+    width: 100%;
+    height: 8rem;
+    background-color: rgba(0, 0, 0, 0.1);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: none;
+}
+
+#handwriting_prediction_images_figure .figure_image.selected {
+    display: block;
+}
+
+#handwriting_prediction_images_figure .figure_image:nth-child(1) {
+    background-image: url("/static/images/handwriting/prediction/image_0.png");
+}
+
+#handwriting_prediction_images_figure .figure_image:nth-child(2) {
+    background-image: url("/static/images/handwriting/prediction/image_1.png");
+}
+
+#handwriting_prediction_images_figure .figure_image:nth-child(3) {
+    background-image: url("/static/images/handwriting/prediction/image_2.png");
+}
+
+#handwriting_prediction_images_figure .figure_image:nth-child(4) {
+    background-image: url("/static/images/handwriting/prediction/image_3.png");
+}
+
+#handwriting_prediction_images_figure .figure_image:nth-child(5) {
+    background-image: url("/static/images/handwriting/prediction/image_4.png");
+}
+
+#handwriting_synthesis_images_figure .figure_images {
+    width: 40rem;
+    overflow-x: auto;
+}
+
+#handwriting_synthesis_images_figure .figure_image {
+    height: 16rem;
+    background-color: rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+#handwriting_synthesis_images_figure .figure_image.selected {
+    display: block;
+}
+
+#handwriting_synthesis_images_figure .figure_image > div {
+    height: 8rem;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+#handwriting_synthesis_images_figure .figure_image > .graph {
+    width: 100rem;
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(1) .strokes {
+    background-image: url("/static/images/handwriting/synthesis/0_strokes.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(2) .strokes {
+    background-image: url("/static/images/handwriting/synthesis/1_strokes.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(3) .strokes {
+    background-image: url("/static/images/handwriting/synthesis/2_strokes.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(4) .strokes {
+    background-image: url("/static/images/handwriting/synthesis/3_strokes.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(5) .strokes {
+    background-image: url("/static/images/handwriting/synthesis/4_strokes.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(1) .graph {
+    background-image: url("/static/images/handwriting/synthesis/0_graph.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(2) .graph {
+    background-image: url("/static/images/handwriting/synthesis/1_graph.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(3) .graph {
+    background-image: url("/static/images/handwriting/synthesis/2_graph.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(4) .graph {
+    background-image: url("/static/images/handwriting/synthesis/3_graph.png");
+}
+
+#handwriting_synthesis_images_figure .figure_image:nth-child(5) .graph {
+    background-image: url("/static/images/handwriting/synthesis/4_graph.png");
+}
